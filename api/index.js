@@ -1,18 +1,14 @@
 import express from 'express';
 import cors from 'cors';
+import { createClient } from '@supabase/supabase-js';
 
 const app = express();
 
-// In-memory storage (Vercel serverless - use database in production)
-let registrations = [];
-let smtpConfig = {
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: { user: '', pass: '' },
-  from: 'noreply@haritbharatexpo.com',
-  recipients: ''
-};
+// Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_ANON_KEY || ''
+);
 
 app.use(cors({ origin: '*' }));
 app.use(express.json());
@@ -22,7 +18,7 @@ app.get('/', (req, res) => {
   res.json({ 
     message: 'Harit Bharat Expo API',
     status: 'running',
-    note: 'Using in-memory storage (deploy with database for production)'
+    database: 'Supabase PostgreSQL'
   });
 });
 
@@ -32,61 +28,136 @@ app.get('/api/health', (req, res) => {
 });
 
 // Get registrations
-app.get('/api/registrations', (req, res) => {
-  res.json(registrations);
+app.get('/api/registrations', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('registrations')
+      .select('*')
+      .order('registered_at', { ascending: false });
+    
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Add registration
-app.post('/api/registrations', (req, res) => {
-  const { fullName, email, phone } = req.body;
-  if (!fullName || !email || !phone) {
-    return res.status(400).json({ error: 'Missing fields' });
+app.post('/api/registrations', async (req, res) => {
+  try {
+    const { fullName, email, phone } = req.body;
+    if (!fullName || !email || !phone) {
+      return res.status(400).json({ error: 'Missing fields' });
+    }
+    
+    const { data, error } = await supabase
+      .from('registrations')
+      .insert([{ 
+        full_name: fullName, 
+        email, 
+        phone,
+        registered_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    res.json({ success: true, registration: data });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: error.message });
   }
-  
-  const newReg = {
-    id: Date.now().toString(),
-    fullName,
-    email,
-    phone,
-    registeredAt: new Date().toISOString()
-  };
-  
-  registrations.push(newReg);
-  res.json({ success: true, registration: newReg });
 });
 
 // Delete registration
-app.delete('/api/registrations/:id', (req, res) => {
-  const { id } = req.params;
-  const initialLength = registrations.length;
-  registrations = registrations.filter(r => r.id !== id);
-  
-  if (registrations.length === initialLength) {
-    return res.status(404).json({ error: 'Not found' });
+app.delete('/api/registrations/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase
+      .from('registrations')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: error.message });
   }
-  
-  res.json({ success: true });
 });
 
-// SMTP Config
-app.get('/api/smtp-config', (req, res) => {
-  res.json({
-    ...smtpConfig,
-    authConfigured: !!(smtpConfig.auth.user && smtpConfig.auth.pass)
-  });
-});
-
-app.post('/api/smtp-config', (req, res) => {
-  const { host, port, secure, auth, from, recipients } = req.body;
-  smtpConfig = { host, port, secure, auth, from, recipients };
-  res.json({ success: true });
-});
-
-app.post('/api/smtp-test', (req, res) => {
-  if (!smtpConfig.auth.user || !smtpConfig.auth.pass) {
-    return res.status(400).json({ error: 'SMTP not configured' });
+// SMTP Config - Get
+app.get('/api/smtp-config', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('smtp_config')
+      .select('*')
+      .single();
+    
+    if (error && error.code !== 'PGRST116') throw error;
+    
+    const config = data || {
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      from: 'noreply@haritbharatexpo.com',
+      recipients: ''
+    };
+    
+    res.json({
+      ...config,
+      authConfigured: !!(data?.auth_user && data?.auth_pass)
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: error.message });
   }
-  res.json({ success: true, message: 'Config valid' });
+});
+
+// SMTP Config - Update
+app.post('/api/smtp-config', async (req, res) => {
+  try {
+    const { host, port, secure, auth, from, recipients } = req.body;
+    
+    const { error } = await supabase
+      .from('smtp_config')
+      .upsert({
+        id: 1,
+        host,
+        port,
+        secure,
+        auth_user: auth.user,
+        auth_pass: auth.pass,
+        from,
+        recipients
+      });
+    
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// SMTP Test
+app.post('/api/smtp-test', async (req, res) => {
+  try {
+    const { data } = await supabase
+      .from('smtp_config')
+      .select('auth_user, auth_pass')
+      .single();
+    
+    if (!data?.auth_user || !data?.auth_pass) {
+      return res.status(400).json({ error: 'SMTP not configured' });
+    }
+    
+    res.json({ success: true, message: 'Config valid' });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(400).json({ error: error.message });
+  }
 });
 
 export default app;

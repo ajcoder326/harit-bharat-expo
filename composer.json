@@ -1,0 +1,21 @@
+{
+  "name": "harit-bharat-expo",
+  "description": "Harit Bharat Expo Registration System - PHP Backend",
+  "type": "project",
+  "require": {
+    "php": ">=7.4",
+    "ext-pdo": "*",
+    "ext-pdo_mysql": "*",
+    "ext-json": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "HaritBharatExpo\\": "api/"
+    }
+  },
+  "config": {
+    "platform": {
+      "php": "7.4"
+    }
+  }
+}

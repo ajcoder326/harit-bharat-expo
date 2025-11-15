@@ -80,7 +80,7 @@ const Admin = () => {
   const loadRegistrations = async () => {
     setIsLoadingRegistrations(true);
     try {
-      const response = await fetch("http://jodhpur.theharitbharat.com/api/registrations");
+      const response = await fetch("http://localhost/harit-bharat-expo/api/registrations");
       const data = await response.json();
       setRegistrations(data);
     } catch (error) {
@@ -97,7 +97,7 @@ const Admin = () => {
   const loadSmtpConfig = async () => {
     setIsLoadingSmtp(true);
     try {
-      const response = await fetch("http://jodhpur.theharitbharat.com/api/smtp-config");
+      const response = await fetch("http://localhost/harit-bharat-expo/api/smtp-config");
       const data = await response.json();
       setSmtpConfig(data);
       setSmtpForm((prev) => ({
@@ -121,7 +121,7 @@ const Admin = () => {
   const handleUpdateSmtp = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch("http://jodhpur.theharitbharat.com/api/smtp-config", {
+      const response = await fetch("http://localhost/harit-bharat-expo/api/smtp-config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(smtpForm),
@@ -143,7 +143,7 @@ const Admin = () => {
   const handleTestSmtp = async () => {
     setIsTestingSmtp(true);
     try {
-      const response = await fetch("http://jodhpur.theharitbharat.com/api/smtp-test", {
+      const response = await fetch("http://localhost/harit-bharat-expo/api/smtp-test", {
         method: "POST",
       });
 
@@ -163,7 +163,7 @@ const Admin = () => {
 
   const handleDeleteRegistration = async (id: string) => {
     try {
-      const response = await fetch(`http://jodhpur.theharitbharat.com/api/registrations/${id}`, {
+      const response = await fetch(`http://localhost/harit-bharat-expo/api/registrations/${id}`, {
         method: "DELETE",
       });
 

@@ -17,8 +17,9 @@ const Index = () => {
 
   // Try multiple API endpoints
   const API_ENDPOINTS = [
-    "http://jodhpur.theharitbharat.com/api",
-    "https://jodhpur.theharitbharat.com/api",
+    'http://localhost/harit-bharat-expo/api/registrations',
+    'http://jodhpur.theharitbharat.com/api/registrations',
+    'https://jodhpur.theharitbharat.com/api/registrations'
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
